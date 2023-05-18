@@ -25,15 +25,30 @@ def submitJob(cid: str) -> str:
     assert len(cid) > 0
     p = subprocess.run(
         [
+            # "bacalhau",
+            # "docker",
+            # "run",
+            # "--id-only",
+            # "--wait=false",
+            # "--input",
+            # "ipfs://" + cid + ":/inputs/data.tar.gz",
+            # "ghcr.io/bacalhau-project/examples/blockchain-etl:0.0.6",
+
             "bacalhau",
             "docker",
             "run",
             "--id-only",
-            "--wait=false",
-            "--input",
-            "ipfs://" + cid + ":/inputs/data.tar.gz",
-            "ghcr.io/bacalhau-project/examples/blockchain-etl:0.0.6",
+            "ghcr.io/bacalhau-project/examples/stable-diffusion-cpu:0.0.1",
+            "--",
+            "python",
+            "demo.py",
+            "--prompt",
+            "meme about tensorflow",
+            "--output",
+            "../outputs/mars.png",
+           
         ],
+        #bacalhau docker run --id-only --gpu 1 ghcr.io/bacalhau-project/examples/stable-diffusion-gpu:0.0.1 -- python main.py --o ./outputs --p "meme about tensorflow"
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
@@ -91,36 +106,37 @@ def parseHashes(filename: str) -> list:
 
 
 def main(file: str, num_files: int = -1):
+    job_ids = submitJob("sdvs")
     # Use multiprocessing to work in parallel
-    count = multiprocessing.cpu_count()
-    with multiprocessing.Pool(processes=count) as pool:
-        hashes = parseHashes(file)[:num_files]
-        print("submitting %d jobs" % len(hashes))
-        job_ids = pool.map(submitJob, hashes)
-        assert len(job_ids) == len(hashes)
+    # count = multiprocessing.cpu_count()
+    # with multiprocessing.Pool(processes=count) as pool:
+    #     hashes = parseHashes(file)[:num_files]
+    #     print("submitting %d jobs" % len(hashes))
+    #     job_ids = pool.map(submitJob, hashes)
+    #     assert len(job_ids) == len(hashes)
 
-        print("waiting for jobs to complete...")
-        while True:
-            job_statuses = pool.map(checkStatusOfJob, job_ids)
-            total_finished = sum(map(lambda x: x == "Completed", job_statuses))
-            if total_finished >= len(job_ids):
-                break
-            print("%d/%d jobs completed" % (total_finished, len(job_ids)))
-            time.sleep(2)
+    #     print("waiting for jobs to complete...")
+    #     while True:
+    #         job_statuses = pool.map(checkStatusOfJob, job_ids)
+    #         total_finished = sum(map(lambda x: x == "Completed", job_statuses))
+    #         if total_finished >= len(job_ids):
+    #             break
+    #         print("%d/%d jobs completed" % (total_finished, len(job_ids)))
+    #         time.sleep(2)
 
-        print("all jobs completed, saving results...")
-        results = pool.map(getResultsFromJob, job_ids)
-        print("finished saving results")
+    #     print("all jobs completed, saving results...")
+    #     results = pool.map(getResultsFromJob, job_ids)
+    #     print("finished saving results")
 
-        # Do something with the results
-        shutil.rmtree("results", ignore_errors=True)
-        os.makedirs("results", exist_ok=True)
-        for r in results:
-            path = os.path.join(r, "outputs", "*.csv")
-            csv_file = glob.glob(path)
-            for f in csv_file:
-                print("moving %s to results" % f)
-                shutil.move(f, "results")
+    #     # Do something with the results
+    #     shutil.rmtree("results", ignore_errors=True)
+    #     os.makedirs("results", exist_ok=True)
+    #     for r in results:
+    #         path = os.path.join(r, "outputs", "*.csv")
+    #         csv_file = glob.glob(path)
+    #         for f in csv_file:
+    #             print("moving %s to results" % f)
+    #             shutil.move(f, "results")
 
 if __name__ == "__main__":
     main("hashes.txt", 10)
